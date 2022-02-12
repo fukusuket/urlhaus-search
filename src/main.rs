@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::{BufWriter, Write};
 use chrono::{DateTime, TimeZone, Utc};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
@@ -98,13 +100,23 @@ fn main() {
     let res_json: Response = res_data.json().unwrap();
     let res_entries = res_json.urls.iter()
         .filter(|&e|
-            ((e.url_status.eq("online") && !args.exclude_online) ||
+                ((e.url_status.eq("online") && !args.exclude_online) ||
                 (e.url_status.eq("offline") && !args.exclude_offline)) &&
                 e.reporter.contains(&args.reporter) &&
                 e.dateadded >= Utc.datetime_from_str(&format!("{}{}", &args.date_from, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()) &&
                 e.dateadded <= Utc.datetime_from_str(&format!("{}{}", &args.date_to, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()));
+
     match args.format {
-        Some(_) => { todo!() }
+        Some(x) if x.to_lowercase().eq("json") => {
+            let content = serde_json::to_string_pretty(&res_json.urls).unwrap();
+            let f = File::create("result.json").expect("Unable to create file.");
+            let mut f = BufWriter::new(f);
+            f.write_all(content.as_bytes()).expect("Unable to write file.");
+            println!("outputted. [{:?}].", f)
+        },
+        Some(x) if x.to_lowercase().eq("csv") => {
+            todo!()
+        },
         _ => {
             for entry in res_entries {
                 println!("{:?}", entry);

@@ -87,7 +87,7 @@ struct ThreatFoxEntry {
 #[derive(Parser, Debug)]
 #[clap(about, long_about = None)]
 struct Args {
-    /// API Endpoint URL
+    /// API Endpoint(urlhaus or threatfox)
     #[clap(short, long, default_value_t = String::from("urlhaus"))]
     api : String,
 
@@ -111,11 +111,11 @@ struct Args {
     #[clap(short, long, default_value_t = String::from("emotet"))]
     tag: String,
 
-    /// Filter by dateadded from(YYYYMMDD)
+    /// Filter by date from(YYYYMMDD)
     #[clap(long, default_value_t = Utc::today().format("%Y%m%d").to_string())]
     date_from: String,
 
-    /// Filter by dateadded to(YYYYMMDD)
+    /// Filter by date to(YYYYMMDD)
     #[clap(long, default_value_t = Utc::today().format("%Y%m%d").to_string())]
     date_to: String,
 
@@ -143,7 +143,7 @@ fn main() {
                     e.first_seen <= Utc.datetime_from_str(&format!("{}{}", &args.date_to, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()));
         match args.format {
             Some(x) if x.to_lowercase().eq("json") => {
-                let content = serde_json::to_string_pretty(&res_entries).unwrap();
+                let content = serde_json::to_string_pretty(&res_json.data).unwrap();
                 let f = File::create("result.json").expect("Unable to create file.");
                 let mut f = BufWriter::new(f);
                 f.write_all(content.as_bytes()).expect("Unable to write file.");
@@ -182,7 +182,7 @@ fn main() {
 
         match args.format {
             Some(x) if x.to_lowercase().eq("json") => {
-                let content = serde_json::to_string_pretty(&res_entries).unwrap();
+                let content = serde_json::to_string_pretty(&res_json.urls).unwrap();
                 let f = File::create("result.json").expect("Unable to create file.");
                 let mut f = BufWriter::new(f);
                 f.write_all(content.as_bytes()).expect("Unable to write file.");

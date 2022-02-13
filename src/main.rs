@@ -99,6 +99,10 @@ struct Args {
     #[clap(long)]
     exclude_offline: bool,
 
+    /// Exclude ioc type.
+    #[clap(long, default_value_t = String::from("hash"))]
+    exclude_ioc: String,
+
     /// Filter by reporter(partial match)
     #[clap(short, long, default_value_t = String::from(""))]
     reporter: String,
@@ -124,7 +128,7 @@ fn main() {
     let args: Args = Args::parse();
     let client = reqwest::blocking::Client::new();
     if args.api.contains("threatfox") {
-        let param = HashMap::from([("query", "taginfo"), ("tag", args.tag.as_str()), ("limit","1000")]);
+        let param = HashMap::from([("query", "taginfo"), ("tag", args.tag.as_str()), ("limit", "1000")]);
         let res = client.post("https://threatfox-api.abuse.ch/api/v1/").json(&param).send();
         let res_data = match res {
             Ok(r) => r,
@@ -134,11 +138,12 @@ fn main() {
         let res_entries = res_json.data.iter().
             filter(|&e|
                 e.reporter.contains(&args.reporter) &&
-                e.first_seen >= Utc.datetime_from_str(&format!("{}{}", &args.date_from, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()) &&
-                e.first_seen <= Utc.datetime_from_str(&format!("{}{}", &args.date_to, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()));
+                    !e.ioc_type.contains(&args.exclude_ioc) &&
+                    e.first_seen >= Utc.datetime_from_str(&format!("{}{}", &args.date_from, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()) &&
+                    e.first_seen <= Utc.datetime_from_str(&format!("{}{}", &args.date_to, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()));
         match args.format {
             Some(x) if x.to_lowercase().eq("json") => {
-                let content = serde_json::to_string_pretty(&res_json.data).unwrap();
+                let content = serde_json::to_string_pretty(&res_entries).unwrap();
                 let f = File::create("result.json").expect("Unable to create file.");
                 let mut f = BufWriter::new(f);
                 f.write_all(content.as_bytes()).expect("Unable to write file.");
@@ -147,8 +152,8 @@ fn main() {
             Some(x) if x.to_lowercase().eq("csv") => {
                 let f = File::create("result.csv").expect("Unable to create file.");
                 let mut wtr = WriterBuilder::new().quote_style(QuoteStyle::Always).from_writer(BufWriter::new(f));
-                let _ = wtr.write_record(&["id", "ioc", "threat_type", "threat_type_desc", "ioc_type", "ioc_type_desc", "malware", "malware_printable","malware_alias", "malware_malpedia", "confidence_level", "first_seen", "tags"]);
-                for e in &res_json.data {
+                let _ = wtr.write_record(&["id", "ioc", "threat_type", "threat_type_desc", "ioc_type", "ioc_type_desc", "malware", "malware_printable", "malware_alias", "malware_malpedia", "confidence_level", "first_seen", "tags"]);
+                for e in res_entries {
                     let _ = wtr.write_record(&[&e.id, &e.ioc.replace("http", "hxxp"), &e.threat_type, &e.threat_type_desc, &e.ioc_type, &e.ioc_type_desc, &e.malware, &e.malware_printable, &e.malware_alias, &e.malware_malpedia, &e.confidence_level.to_string(), &e.first_seen.to_string(), &e.tags.join(":")]);
                 }
                 println!("outputted. [{}].", "result.csv");
@@ -159,7 +164,6 @@ fn main() {
                 }
             }
         }
-
     } else {
         let param = [("tag", args.tag.as_str())];
         let res = client.post("https://urlhaus-api.abuse.ch/v1/tag").form(&param).send();
@@ -178,7 +182,7 @@ fn main() {
 
         match args.format {
             Some(x) if x.to_lowercase().eq("json") => {
-                let content = serde_json::to_string_pretty(&res_json.urls).unwrap();
+                let content = serde_json::to_string_pretty(&res_entries).unwrap();
                 let f = File::create("result.json").expect("Unable to create file.");
                 let mut f = BufWriter::new(f);
                 f.write_all(content.as_bytes()).expect("Unable to write file.");
@@ -188,7 +192,7 @@ fn main() {
                 let f = File::create("result.csv").expect("Unable to create file.");
                 let mut wtr = WriterBuilder::new().quote_style(QuoteStyle::Always).from_writer(BufWriter::new(f));
                 let _ = wtr.write_record(&["url_id", "url", "url_status", "dateadded", "reporter", "threat", "tags"]);
-                for e in &res_json.urls {
+                for e in res_entries {
                     let _ = wtr.write_record(&[&e.url_id, &e.url.replace("http", "hxxp"), &e.url_status, &e.dateadded.to_string(), &e.reporter, &e.threat, &e.tags.join(":")]);
                 }
                 println!("outputted. [{}].", "result.csv");
@@ -200,21 +204,5 @@ fn main() {
             }
         };
     }
-}
-
-#[test]
-fn compare_datetime() {
-    let e = Entry {
-        url_id: "".to_string(),
-        url: "".to_string(),
-        url_status: "".to_string(),
-        dateadded: Utc::now(),
-        reporter: "".to_string(),
-        threat: "".to_string(),
-        tags: vec![],
-        urlhaus_reference: "".to_string(),
-    };
-    let d = Utc.datetime_from_str("20181207000000", "%Y%m%d%H%M%S").unwrap();
-    assert!(e.dateadded > d)
 }
 

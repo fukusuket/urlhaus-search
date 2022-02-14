@@ -152,9 +152,9 @@ fn main() {
             Some(x) if x.to_lowercase().eq("csv") => {
                 let f = File::create("result.csv").expect("Unable to create file.");
                 let mut wtr = WriterBuilder::new().quote_style(QuoteStyle::Always).from_writer(BufWriter::new(f));
-                let _ = wtr.write_record(&["id", "ioc", "threat_type", "threat_type_desc", "ioc_type", "ioc_type_desc", "malware", "malware_printable", "malware_alias", "malware_malpedia", "confidence_level", "first_seen", "tags"]);
+                let _ = wtr.write_record(&["id", "ioc", "threat_type", "threat_type_desc", "ioc_type", "ioc_type_desc", "malware", "malware_printable", "malware_alias", "malware_malpedia", "confidence_level", "first_seen", "reporter", "tags"]);
                 for e in res_entries {
-                    let _ = wtr.write_record(&[&e.id, &e.ioc.replace("http", "hxxp"), &e.threat_type, &e.threat_type_desc, &e.ioc_type, &e.ioc_type_desc, &e.malware, &e.malware_printable, &e.malware_alias, &e.malware_malpedia, &e.confidence_level.to_string(), &e.first_seen.to_string(), &e.tags.join(":")]);
+                    let _ = wtr.write_record(&[&e.id, &e.ioc.replace("http", "hxxp"), &e.threat_type, &e.threat_type_desc, &e.ioc_type, &e.ioc_type_desc, &e.malware, &e.malware_printable, &e.malware_alias, &e.malware_malpedia, &e.confidence_level.to_string(), &e.first_seen.to_string(), &e.reporter, &e.tags.join(":")]);
                 }
                 println!("outputted. [{}].", "result.csv");
             },

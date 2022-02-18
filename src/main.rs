@@ -127,6 +127,28 @@ struct Args {
     format: Option<String>,
 }
 
+fn get_response2(args: &Args, client: Client) -> UrlhausResponse {
+    let param = [("tag", args.tag.as_str())];
+    let res = client.post("https://urlhaus-api.abuse.ch/v1/tag").form(&param).send();
+    let res_data = match res {
+        Ok(r) => r,
+        Err(e) => panic!("failed to get abuse.ch api response. [{:?}]", e)
+    };
+    let res_json: UrlhausResponse = res_data.json().unwrap();
+    res_json
+}
+
+fn get_response1(args: &Args, client: &Client) -> ThreatfoxResponse {
+    let param = HashMap::from([("query", "taginfo"), ("tag", args.tag.as_str()), ("limit", "1000")]);
+    let res = client.post("https://threatfox-api.abuse.ch/api/v1/").json(&param).send();
+    let res_data = match res {
+        Ok(r) => r,
+        Err(e) => panic!("failed to get abuse.ch api response. [{:?}]", e)
+    };
+    let res_json: ThreatfoxResponse = res_data.json().unwrap();
+    res_json
+}
+
 fn to_json<T: Serialize>(res_json: Vec<&T>) {
     let content = serde_json::to_string_pretty(&res_json).unwrap();
     let f = File::create("result.json").expect("Unable to create file.");
@@ -145,7 +167,7 @@ fn main() {
     let args: Args = Args::parse();
     let client = reqwest::blocking::Client::new();
     if args.api.contains("threatfox") {
-        let res_json = get_response(&args, &client);
+        let res_json = get_response1(&args, &client);
         let res_entries: Vec<&ThreatFoxEntry> = res_json.data.iter().
             filter(|&e|
                 e.reporter.contains(&args.reporter) &&
@@ -167,13 +189,7 @@ fn main() {
             _ => to_std(res_entries)
         }
     } else {
-        let param = [("tag", args.tag.as_str())];
-        let res = client.post("https://urlhaus-api.abuse.ch/v1/tag").form(&param).send();
-        let res_data = match res {
-            Ok(r) => r,
-            Err(e) => panic!("failed to get abuse.ch api response. [{:?}]", e)
-        };
-        let res_json: UrlhausResponse = res_data.json().unwrap();
+        let res_json = get_response2(&args, client);
         let res_entries: Vec<&UrlhausEntry> = res_json.urls.iter()
             .filter(|&e|
                 ((e.url_status.eq("online") && !args.exclude_online) ||
@@ -182,7 +198,6 @@ fn main() {
                 e.dateadded >= Utc.datetime_from_str(&format!("{}{}", &args.date_from, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()) &&
                 e.dateadded <= Utc.datetime_from_str(&format!("{}{}", &args.date_to, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()))
             .collect();
-
         match args.format {
             Some(x) if x.to_lowercase().eq("csv") => {
                 let f = File::create("result.csv").expect("Unable to create file.");
@@ -198,7 +213,6 @@ fn main() {
         };
     }
 }
-
 
 
 

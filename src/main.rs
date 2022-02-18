@@ -1,9 +1,12 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+
 use chrono::{DateTime, TimeZone, Utc};
 use clap::Parser;
 use csv::{QuoteStyle, WriterBuilder};
+use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 
 mod my_date_format {
@@ -89,7 +92,7 @@ struct ThreatFoxEntry {
 struct Args {
     /// API Endpoint(urlhaus or threatfox)
     #[clap(short, long, default_value_t = String::from("urlhaus"))]
-    api : String,
+    api: String,
 
     /// Exclude url_status online
     #[clap(long)]
@@ -124,31 +127,33 @@ struct Args {
     format: Option<String>,
 }
 
+fn to_json<T: Serialize>(res_json: Vec<&T>) {
+    let content = serde_json::to_string_pretty(&res_json).unwrap();
+    let f = File::create("result.json").expect("Unable to create file.");
+    let mut f = BufWriter::new(f);
+    f.write_all(content.as_bytes()).expect("Unable to write file.");
+    println!("outputted. [{:?}].", f)
+}
+
+fn to_std<T: Debug>(res_entries: Vec<&T>) {
+    for entry in res_entries {
+        println!("{:?}", entry);
+    }
+}
+
 fn main() {
     let args: Args = Args::parse();
     let client = reqwest::blocking::Client::new();
     if args.api.contains("threatfox") {
-        let param = HashMap::from([("query", "taginfo"), ("tag", args.tag.as_str()), ("limit", "1000")]);
-        let res = client.post("https://threatfox-api.abuse.ch/api/v1/").json(&param).send();
-        let res_data = match res {
-            Ok(r) => r,
-            Err(e) => panic!("failed to get abuse.ch api response. [{:?}]", e)
-        };
-        let res_json: ThreatfoxResponse = res_data.json().unwrap();
-        let res_entries = res_json.data.iter().
+        let res_json = get_response(&args, &client);
+        let res_entries: Vec<&ThreatFoxEntry> = res_json.data.iter().
             filter(|&e|
                 e.reporter.contains(&args.reporter) &&
-                    !e.ioc_type.contains(&args.exclude_ioc) &&
-                    e.first_seen >= Utc.datetime_from_str(&format!("{}{}", &args.date_from, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()) &&
-                    e.first_seen <= Utc.datetime_from_str(&format!("{}{}", &args.date_to, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()));
+                !e.ioc_type.contains(&args.exclude_ioc) &&
+                e.first_seen >= Utc.datetime_from_str(&format!("{}{}", &args.date_from, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()) &&
+                e.first_seen <= Utc.datetime_from_str(&format!("{}{}", &args.date_to, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()))
+            .collect();
         match args.format {
-            Some(x) if x.to_lowercase().eq("json") => {
-                let content = serde_json::to_string_pretty(&res_json.data).unwrap();
-                let f = File::create("result.json").expect("Unable to create file.");
-                let mut f = BufWriter::new(f);
-                f.write_all(content.as_bytes()).expect("Unable to write file.");
-                println!("outputted. [{:?}].", f)
-            },
             Some(x) if x.to_lowercase().eq("csv") => {
                 let f = File::create("result.csv").expect("Unable to create file.");
                 let mut wtr = WriterBuilder::new().quote_style(QuoteStyle::Always).from_writer(BufWriter::new(f));
@@ -158,11 +163,8 @@ fn main() {
                 }
                 println!("outputted. [{}].", "result.csv");
             },
-            _ => {
-                for entry in res_entries {
-                    println!("{:?}", entry);
-                }
-            }
+            Some(x) if x.to_lowercase().eq("json") => to_json(res_entries),
+            _ => to_std(res_entries)
         }
     } else {
         let param = [("tag", args.tag.as_str())];
@@ -172,22 +174,16 @@ fn main() {
             Err(e) => panic!("failed to get abuse.ch api response. [{:?}]", e)
         };
         let res_json: UrlhausResponse = res_data.json().unwrap();
-        let res_entries = res_json.urls.iter()
+        let res_entries: Vec<&UrlhausEntry> = res_json.urls.iter()
             .filter(|&e|
                 ((e.url_status.eq("online") && !args.exclude_online) ||
-                    (e.url_status.eq("offline") && !args.exclude_offline)) &&
-                    e.reporter.contains(&args.reporter) &&
-                    e.dateadded >= Utc.datetime_from_str(&format!("{}{}", &args.date_from, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()) &&
-                    e.dateadded <= Utc.datetime_from_str(&format!("{}{}", &args.date_to, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()));
+                (e.url_status.eq("offline") && !args.exclude_offline)) &&
+                e.reporter.contains(&args.reporter) &&
+                e.dateadded >= Utc.datetime_from_str(&format!("{}{}", &args.date_from, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()) &&
+                e.dateadded <= Utc.datetime_from_str(&format!("{}{}", &args.date_to, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()))
+            .collect();
 
         match args.format {
-            Some(x) if x.to_lowercase().eq("json") => {
-                let content = serde_json::to_string_pretty(&res_json.urls).unwrap();
-                let f = File::create("result.json").expect("Unable to create file.");
-                let mut f = BufWriter::new(f);
-                f.write_all(content.as_bytes()).expect("Unable to write file.");
-                println!("outputted. [{:?}].", f)
-            },
             Some(x) if x.to_lowercase().eq("csv") => {
                 let f = File::create("result.csv").expect("Unable to create file.");
                 let mut wtr = WriterBuilder::new().quote_style(QuoteStyle::Always).from_writer(BufWriter::new(f));
@@ -197,12 +193,13 @@ fn main() {
                 }
                 println!("outputted. [{}].", "result.csv");
             },
-            _ => {
-                for entry in res_entries {
-                    println!("{:?}", entry);
-                }
-            }
+            Some(x) if x.to_lowercase().eq("json") => to_json(res_entries),
+            _ => to_std(res_entries)
         };
     }
 }
+
+
+
+
 

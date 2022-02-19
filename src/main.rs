@@ -149,7 +149,7 @@ fn get_response1(args: &Args, client: &Client) -> ThreatfoxResponse {
     res_json
 }
 
-fn to_json<T: Serialize>(res_json: Vec<&T>) {
+fn to_json<T: Serialize>(res_json: Vec<T>) {
     let content = serde_json::to_string_pretty(&res_json).unwrap();
     let f = File::create("result.json").expect("Unable to create file.");
     let mut f = BufWriter::new(f);
@@ -157,7 +157,7 @@ fn to_json<T: Serialize>(res_json: Vec<&T>) {
     println!("outputted. [{:?}].", f)
 }
 
-fn to_std<T: Debug>(res_entries: Vec<&T>) {
+fn to_std<T: Debug>(res_entries: Vec<T>) {
     for entry in res_entries {
         println!("{:?}", entry);
     }
@@ -168,8 +168,8 @@ fn main() {
     let client = reqwest::blocking::Client::new();
     if args.api.contains("threatfox") {
         let res_json = get_response1(&args, &client);
-        let res_entries: Vec<&ThreatFoxEntry> = res_json.data.iter().
-            filter(|&e|
+        let res_entries: Vec<ThreatFoxEntry> = res_json.data.into_iter().
+            filter(|e|
                 e.reporter.contains(&args.reporter) &&
                 !e.ioc_type.contains(&args.exclude_ioc) &&
                 e.first_seen >= Utc.datetime_from_str(&format!("{}{}", &args.date_from, "000000"), "%Y%m%d%H%M%S").unwrap_or(Utc::now()) &&
@@ -190,8 +190,8 @@ fn main() {
         }
     } else {
         let res_json = get_response2(&args, client);
-        let res_entries: Vec<&UrlhausEntry> = res_json.urls.iter()
-            .filter(|&e|
+        let res_entries: Vec<UrlhausEntry> = res_json.urls.into_iter()
+            .filter(|e|
                 ((e.url_status.eq("online") && !args.exclude_online) ||
                 (e.url_status.eq("offline") && !args.exclude_offline)) &&
                 e.reporter.contains(&args.reporter) &&

@@ -149,15 +149,15 @@ fn get_response1(args: &Args, client: &Client) -> ThreatfoxResponse {
     res_json
 }
 
-fn to_json<T: Serialize>(res_json: Vec<T>) {
-    let content = serde_json::to_string_pretty(&res_json).unwrap();
+fn to_json<T: Serialize>(res_json: &[T]) {
+    let content = serde_json::to_string_pretty(res_json).unwrap();
     let f = File::create("result.json").expect("Unable to create file.");
     let mut f = BufWriter::new(f);
     f.write_all(content.as_bytes()).expect("Unable to write file.");
     println!("outputted. [{:?}].", f)
 }
 
-fn to_std<T: Debug>(res_entries: Vec<T>) {
+fn to_std<T: Debug>(res_entries: &[T]) {
     for entry in res_entries {
         println!("{:?}", entry);
     }
@@ -185,8 +185,8 @@ fn main() {
                 }
                 println!("outputted. [{}].", "result.csv");
             },
-            Some(x) if x.to_lowercase().eq("json") => to_json(res_entries),
-            _ => to_std(res_entries)
+            Some(x) if x.to_lowercase().eq("json") => to_json(&res_entries),
+            _ => to_std(&res_entries)
         }
     } else {
         let res_json = get_response2(&args, client);
@@ -208,8 +208,8 @@ fn main() {
                 }
                 println!("outputted. [{}].", "result.csv");
             },
-            Some(x) if x.to_lowercase().eq("json") => to_json(res_entries),
-            _ => to_std(res_entries)
+            Some(x) if x.to_lowercase().eq("json") => to_json(&res_entries),
+            _ => to_std(&res_entries)
         };
     }
 }

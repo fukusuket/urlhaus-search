@@ -30,11 +30,15 @@ OPTIONS:
 
 1. git clone https://github.com/fukusuket/urlhaus-search.git
 2. cd urlhaus-search
-3. cargo run -- --date-from 20220201 --date-to 20220210 --tag emotet --api urlhaus
+3. cargo run -- --date-from 20220201 --date-to 20220210 --tag emotet --api urlhaus --format csv
 
 then output recent ioc from urlhaus api.
 
 ## Output
-
-TODO
-
+then output result.csv current directory as follows.
+```
+"url_id","url","url_status","dateadded","reporter","threat","tags"
+"2207025","hxxp://example.com/4l6T5s7EcTyT/","online","2022-05-22 21:15:00 UTC","Reporter Name","malware_download","emotet:epoch5:exe:Heodo"
+"2206575","hxxp:///e2oCWBnC/","online","2022-05-22 11:47:00 UTC","Reporter Name","malware_download","emotet:epoch4:exe:Heodo"
+...
+```

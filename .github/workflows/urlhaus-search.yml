@@ -42,15 +42,15 @@ jobs:
       - name: Package for linux-musl
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: |
-          zip --junk-paths ${{ matrix.target }} target/release/evtx-parser
+          zip --junk-paths ${{ matrix.target }} target/release/urlhaus-search
       - name: Package for windows
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: |
-          powershell Compress-Archive -Path target/release/evtx-parser.exe -DestinationPath ${{ matrix.target }}.zip
+          powershell Compress-Archive -Path target/release/urlhaus-search.exe -DestinationPath ${{ matrix.target }}.zip
       - name: Package for macOS
         if: matrix.target == 'x86_64-apple-darwin'
         run: |
-          zip --junk-paths ${{ matrix.target }} target/release/evtx-parser
+          zip --junk-paths ${{ matrix.target }} target/release/urlhaus-search
       - uses: actions/upload-artifact@v2
         with:
           name: build-${{ matrix.target }}

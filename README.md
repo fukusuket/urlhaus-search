@@ -26,7 +26,7 @@ OPTIONS:
     -t, --tag <TAG>                    Filter by tag(partial match) [default: emotet]
 ```
 
-## How to use([from release](https://github.com/fukusuket/urlhaus-search/releases)
+## How to use([from release](https://github.com/fukusuket/urlhaus-search/releases))
 1. Download zip [from release page](https://github.com/fukusuket/urlhaus-search/releases), and unzip.
 2. >urlhause-search.exe ---date-from 20220201 --date-to 20220210 --tag emotet --api urlhaus --format csv
 

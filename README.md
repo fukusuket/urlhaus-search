@@ -38,7 +38,7 @@ then output recent ioc from urlhaus api.
 then output result.csv current directory as follows.
 ```
 "url_id","url","url_status","dateadded","reporter","threat","tags"
-"2207025","hxxp://example.com/4l6T5s7EcTyT/","online","2022-05-22 21:15:00 UTC","Reporter Name","malware_download","emotet:epoch5:exe:Heodo"
-"2206575","hxxp:///e2oCWBnC/","online","2022-05-22 11:47:00 UTC","Reporter Name","malware_download","emotet:epoch4:exe:Heodo"
+"2107099","hxxp://example.com/4l9T5s7EcTyT/","online","2022-05-22 21:15:00 UTC","Bob","malware_download","emotet:epoch5:exe:Heodo"
+"2106523","hxxp:///example.com/ae6oCWBnC/","online","2022-05-22 11:47:00 UTC","Alice","malware_download","emotet:epoch4:exe:Heodo"
 ...
 ```

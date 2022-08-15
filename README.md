@@ -1,6 +1,6 @@
 # URLhaus-Search
-- Search IoC from [URLhaus API](https://urlhaus-api.abuse.ch/#taginfo).
-- Search IoC from [Threatfox API](https://threatfox.abuse.ch/api/#taginfo).
+- Search IoC from [URLhaus API](https://urlhaus-api.abuse.ch/#taginfo) and output(json or csv).
+- Search IoC from [Threatfox API](https://threatfox.abuse.ch/api/#taginfo) and output(json or csv).
 
 
 ## Usage

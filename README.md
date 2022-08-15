@@ -3,10 +3,6 @@
 - Search IoC from [Threatfox API](https://threatfox.abuse.ch/api/#taginfo).
 
 
-## Requirements
-
-Rustc version 1.56.0 or greater.
-
 ## Usage
 
 ```
